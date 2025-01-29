@@ -1,23 +1,18 @@
-from flask import Flask, request, send_file
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import Response
 from rembg import remove
 from PIL import Image
 import io
 
-app = Flask(__name__)
+app = FastAPI(title="Background Remover")
 
-@app.route('/remove', methods=['POST'])
-def process():
-    if 'file' not in request.files:
-        return "Send image via POST with 'file' key", 400
-        
-    img = Image.open(request.files['file'].stream)
-    result = remove(img)
+@app.post("/")
+async def remove_background(file: UploadFile = File(...)):
+    image = Image.open(file.file)
+    result = remove(image)
     
-    output = io.BytesIO()
-    result.save(output, format="PNG")
-    output.seek(0)
+    byte_arr = io.BytesIO()
+    result.save(byte_arr, format="PNG")
+    byte_arr.seek(0)
     
-    return send_file(output, mimetype='image/png')
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000)
+    return Response(content=byte_arr.getvalue(), media_type="image/png")
